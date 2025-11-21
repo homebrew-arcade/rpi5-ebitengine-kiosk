@@ -1,0 +1,14 @@
+[Unit]
+Description=Cage Kiosk Service
+After=graphical.target
+
+[Service]
+Type=simple
+ExecStart=/home/arcade/kiosk
+User=arcade
+Restart=no
+StandardOutput=file:/tmp/kiosk.log
+StandardError=inherit
+
+[Install]
+WantedBy=graphical.target
