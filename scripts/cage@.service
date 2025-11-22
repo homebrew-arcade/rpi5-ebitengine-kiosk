@@ -1,0 +1,43 @@
+# Cribbed from Cage Wiki
+# https://github.com/cage-kiosk/cage/wiki/Starting-Cage-on-boot-with-systemd
+
+[Unit]
+Description=Cage Wayland compositor on %I
+After=systemd-user-sessions.service plymouth-quit-wait.service
+Before=graphical.target
+ConditionPathExists=/dev/tty0
+Wants=dbus.socket systemd-logind.service
+After=dbus.socket systemd-logind.service
+Conflicts=getty@%i.service
+After=getty@%i.service
+
+[Service]
+Type=simple
+
+# KIOSK SETTINGS === DIRECT CAGE PROCESS
+# Restart=always
+# ExecStart=/usr/bin/cage /home/arcade/ebitentest
+# ===
+
+# KIOSK SETTINGS === WATCHER WITH CAGE SUB-PROCESS
+Environment="KIOSK_APP_PATH=/home/arcade/ebitentest"
+Environment="KIOSK_APP_WATCH=1"
+ExecStart=/home/arcade/kiosk
+Restart=no
+# ===
+
+ExecStartPost=+sh -c "tty_name='%i'; exec chvt $${tty_name#tty}"
+User=arcade
+UtmpIdentifier=%I
+UtmpMode=user
+TTYPath=/dev/%I
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty-fail
+PAMName=cage
+
+[Install]
+WantedBy=graphical.target
+Alias=display-manager.service
+DefaultInstance=tty7
