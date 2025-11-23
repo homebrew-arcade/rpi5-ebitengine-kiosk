@@ -40,10 +40,10 @@ Confirmed from Windows 10, Raspberry Pi Imager v 1.9.6
 The provisioning script will attempt to run a sample Ebitengine app. This requires the script\
 to be run from the device directly with a plugged in monitor and keyboard.
 
-After initial install the dev watcher should enable hotreload and development can occur\
-remotely pushed builds.
+If the configured Kiosk application is exited the service will attempt to reload automatically.
 
-If the configured Kiosk application is exited the service will not attempt to revive it.
+This can actually be useful during development. If you build in an exit input sequence you can reload on-demand.
+This can be used to rebuild updates git/rsync and trigger reload from the application.
 
 ```
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/homebrew-arcade/rpi5-ebitengine-kiosk/main/scripts/provision.sh)"

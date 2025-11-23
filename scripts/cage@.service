@@ -14,18 +14,18 @@ After=getty@%i.service
 [Service]
 Type=simple
 
-# KIOSK SETTINGS === DIRECT CAGE PROCESS
-# Restart=always
-# ExecStart=/usr/bin/cage /home/arcade/ebitentest
-# ===
+# KIOSK SETTINGS
+Environment="EBITENTEST_MAX_SPRITES=10000"
+Environment="EBITENTEST_TPS=60"
+Environment="EBITENTEST_FULL_SCREEN_ENABLED=1"
+Environment="EBITENTEST_SCREEN_WIDTH=480"
+Environment="EBITENTEST_SCREEN_HEIGHT=256"
+Environment="EBITENTEST_WINDOW_WIDTH=480"
+Environment="EBITENTEST_WINDOW_HEIGHT=256"
+ExecStart=/usr/bin/cage /home/arcade/ebitentest
+# KIOSK SETTINGS
 
-# KIOSK SETTINGS === WATCHER WITH CAGE SUB-PROCESS
-Environment="KIOSK_APP_PATH=/home/arcade/ebitentest"
-Environment="KIOSK_APP_WATCH=1"
-ExecStart=/home/arcade/kiosk
-Restart=no
-# ===
-
+Restart=always
 ExecStartPost=+sh -c "tty_name='%i'; exec chvt $${tty_name#tty}"
 User=arcade
 UtmpIdentifier=%I

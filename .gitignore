@@ -32,7 +32,7 @@ go.work.sum
 .vscode/
 
 # Build artifacts
-ebitentest
+/ebitentest
 /cmd/ebitentest/ebitentest
-kiosk
+/kiosk
 /cmd/ebitentest/kiosk

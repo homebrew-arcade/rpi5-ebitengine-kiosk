@@ -6,6 +6,8 @@ import (
 	"image/color"
 	"log"
 	randv2 "math/rand/v2"
+	"os"
+	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -14,114 +16,119 @@ import (
 //go:embed assets/*
 var embedFS embed.FS
 
-var BGColor = color.NRGBA{R: 191, G: 251, B: 191, A: 255}
+var BGColor = color.NRGBA{R: 0, G: 0, B: 0, A: 255}
 
-var screenWidth int = 1280
-var screenHeight int = 720
-
-var spriteImg = func() *ebiten.Image {
-	img, _, err := ebitenutil.NewImageFromFileSystem(embedFS, "assets/sprite.png")
-	if err != nil {
-		log.Fatal(err)
-	}
-	return img
-}()
+var (
+	MaxSprites        = 10000
+	TPS               = 60
+	ScreenWidth       = 480 // 16 tiles
+	ScreenHeight      = 256 // 8 tiles
+	WindowWidth       = 480
+	WindowHeight      = 256
+	VSyncEnabled      = true
+	FullScreenEnabled = true
+	WindowTitle       = "Ebiten Test"
+	TileSize          = 32
+	FTileSize         = float64(32)
+)
 
 var rand = func() *randv2.Rand {
-	s := randv2.NewPCG(0, 0)
+	s := randv2.NewPCG(10, 1)
 	return randv2.New(s)
 }()
 
-type Sprite struct {
-	X      float64
-	Y      float64
-	XVel   float64
-	YVel   float64
-	XScale float64
-	YScale float64
-	XSize  float64
-	YSize  float64
-}
-
 type Game struct {
-	tickCnt int
-	sprs    []Sprite
+	sprCnt     int
+	startHoldF int
+	sprs       []Sprite
+	btns       []Button
 }
 
 func (g *Game) Init() {
-	g.tickCnt = 0
-	g.sprs = make([]Sprite, 2500)
-	for i := range g.sprs {
-		sp := &g.sprs[i]
-		sp.XScale = rand.Float64()
-		if sp.XScale < 0.1 {
-			sp.XScale = 0.1
-		}
-		sp.XSize = 64 * sp.XScale
-		sp.YScale = rand.Float64()
-		if sp.YScale < 0.1 {
-			sp.YScale = 0.1
-		}
-		sp.YSize = 64 * sp.YScale
-		sp.X = rand.Float64() * (float64(screenWidth) - sp.XSize)
-		sp.Y = rand.Float64() * (float64(screenHeight) - sp.YSize)
-		sp.XVel = rand.Float64()*5 - 2.5
-		sp.YVel = rand.Float64()*5 - 2.5
-	}
+	g.sprCnt = 1
+	g.startHoldF = 0
+	initSprites(g)
+	initButtons(g)
 }
 
 func (g *Game) Draw(s *ebiten.Image) {
 	s.Fill(BGColor)
-	op := &ebiten.DrawImageOptions{}
-	for _, sp := range g.sprs {
-		op.GeoM.Reset()
-		op.GeoM.Scale(sp.XScale, sp.YScale)
-		op.GeoM.Translate(sp.X, sp.Y)
-
-		s.DrawImage(spriteImg, op)
-	}
-	ebitenutil.DebugPrint(s, fmt.Sprintf("FPS: %v", ebiten.ActualFPS()))
+	drawSprites(g, s)
+	drawButtons(g, s)
+	ebitenutil.DebugPrint(s, fmt.Sprintf("%v sprites; FPS: %v", g.sprCnt, ebiten.ActualFPS()))
 }
 
 func (g *Game) Update() error {
-	g.tickCnt++
-	if g.tickCnt > (60 * 15) {
-		return fmt.Errorf("Closing app after 15 seconds")
+
+	if ebiten.IsKeyPressed(Esc) {
+		//ebiten.IsKeyPressed(ebiten.Key1) {
+		return fmt.Errorf("Closing app from Escape exit")
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyEscape) || ebiten.IsKeyPressed(ebiten.KeyQ) {
-		return fmt.Errorf("Closing app from keyboard exit")
-	}
-
-	for i := range g.sprs {
-		sp := &g.sprs[i]
-		sp.X += sp.XVel
-		sp.Y += sp.YVel
-
-		if sp.X < 0-sp.XSize {
-			sp.X = float64(screenWidth)
-		} else if sp.X > float64(screenWidth) {
-			sp.X = 0 - sp.XSize
+	if ebiten.IsKeyPressed(P1Start) {
+		g.startHoldF++
+		if g.startHoldF > 120 {
+			return fmt.Errorf("Closing app from P1 Start exit")
 		}
-
-		if sp.Y < 0-sp.YSize {
-			sp.Y = float64(screenHeight)
-		} else if sp.Y > float64(screenHeight) {
-			sp.Y = 0 - sp.YSize
-		}
+	} else {
+		g.startHoldF = 0
 	}
+
+	if ebiten.IsKeyPressed(P1Up) {
+		g.sprCnt++
+	} else if ebiten.IsKeyPressed(P1Down) {
+		g.sprCnt--
+	} else if ebiten.IsKeyPressed(P1Right) {
+		g.sprCnt += 10
+	} else if ebiten.IsKeyPressed(P1Left) {
+		g.sprCnt -= 10
+	}
+	if g.sprCnt > MaxSprites {
+		g.sprCnt = MaxSprites
+	} else if g.sprCnt < 1 {
+		g.sprCnt = 1
+	}
+	updateSprites(g)
+	updateButtons(g)
 	return nil
 }
 
+func getSafeENVInt(key string, def int) int {
+	envStr := os.Getenv(key)
+	if envStr != "" {
+		num, err := strconv.Atoi(envStr)
+		if err == nil {
+			fmt.Println(key, num)
+			return num
+		}
+	}
+	return def
+}
+
+func updateSettingsFromENV() {
+	MaxSprites = getSafeENVInt("EBITENTEST_MAX_SPRITES", MaxSprites)
+	TPS = getSafeENVInt("EBITENTEST_TPS", TPS)
+	fullScreenEnabledInt := getSafeENVInt("EBITENTEST_FULL_SCREEN_ENABLED", 1)
+	if fullScreenEnabledInt == 0 {
+		FullScreenEnabled = false
+	}
+	ScreenWidth = getSafeENVInt("EBITENTEST_SCREEN_WIDTH", ScreenWidth)
+	ScreenHeight = getSafeENVInt("EBITENTEST_SCREEN_HEIGHT", ScreenHeight)
+	WindowWidth = getSafeENVInt("EBITENTEST_WINDOW_WIDTH", WindowWidth)
+	WindowHeight = getSafeENVInt("EBITENTEST_WINDOW_HEIGHT", WindowHeight)
+}
+
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return screenWidth, screenHeight
+	return ScreenWidth, ScreenHeight
 }
 
 func StartEbitenTest() {
-	ebiten.SetWindowSize(screenWidth, screenHeight)
-	ebiten.SetWindowTitle("Kiosk Test")
-	ebiten.SetTPS(60)
-	ebiten.SetVsyncEnabled(true)
+	updateSettingsFromENV()
+	ebiten.SetWindowSize(WindowWidth, WindowHeight)
+	ebiten.SetWindowTitle(WindowTitle)
+	ebiten.SetTPS(TPS)
+	ebiten.SetVsyncEnabled(VSyncEnabled)
+	ebiten.SetFullscreen(FullScreenEnabled)
 	g := &Game{}
 	g.Init()
 	if err := ebiten.RunGame(g); err != nil {

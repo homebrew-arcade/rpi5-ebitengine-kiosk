@@ -21,15 +21,9 @@ go build -C /home/arcade/rpi5-ebitengine-kiosk ./cmd/ebitentest/ebitentest.go
 mv /home/arcade/rpi5-ebitengine-kiosk/ebitentest /home/arcade/
 chmod 755 /home/arcade/ebitentest
 echo "Running sample app directly in Cage kiosk"
-echo "Will exit after 15 seconds. Press Q or ESC to exit immediately"
+echo "Press ESC, or hold the '1' key for 2 seconds to exit"
 read -n 1 -s -p "Press any key to run..."
 cage /home/arcade/ebitentest
-
-# building kiosk process manager
-echo "Building Kiosk Watch app"
-go build -C /home/arcade/rpi5-ebitengine-kiosk/cmd/kiosk kiosk.go
-mv /home/arcade/rpi5-ebitengine-kiosk/kiosk /home/arcade/
-chmod 755 /home/arcade/kiosk
 
 # configure startup service
 echo "Configuring kiosk startup service"
@@ -38,20 +32,15 @@ sudo cp /home/arcade/rpi5-ebitengine-kiosk/scripts/pamconf /etc/pam.d/cage
 sudo systemctl daemon-reload
 sudo systemctl enable cage@tty1.service
 sudo systemctl set-default graphical.target
-echo "Re-running sample app from kiosk cage@.service"
-echo "Will exit after 15 seconds. Press Q or ESC to exit immediately"
-read -n 1 -s -p "Press any key to run..."
-sudo systemctl start cage@.service
-sudo systemctl stop cage@.service
 
 # configure auto-login
-#echo "Using raspi-config to configure automatic login for arcade user"
-#echo "System Options > Boot / Auto Login > B1 Console Autologin"
-#read -n 1 -s -p "Press any key to continue..."
-#sudo raspi-config
+echo "Using raspi-config to configure automatic login for arcade user"
+echo "System Options > Boot / Auto Login > B1 Console Autologin"
+read -n 1 -s -p "Press any key to continue..."
+sudo raspi-config
 
 # All done
 echo "All done! Should start on boot."
-echo "Edit /etc/systemd/system/cage@.service for kiosk settings"
+echo "Edit /etc/systemd/system/cage@.service for Kiosk settings"
 read -n 1 -s -p "Press any key to reboot..."
 sudo reboot
